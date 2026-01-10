@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SaaSPlatform.Api.Common;
 using SaaSPlatform.Api.Data;
 using SaaSPlatform.Api.Models;
 
@@ -10,15 +11,18 @@ namespace SaaSPlatform.Api.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly TenantContext _tenantContext;
 
-    public UsersController(AppDbContext db)
+    public UsersController(AppDbContext db, TenantContext tenantContext)
     {
         _db = db;
+        _tenantContext = tenantContext;
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateUser(string email, Guid tenantId)
+    public async Task<IActionResult> CreateUser(string email)
     {
+        var tenantId = _tenantContext.TenantId;
         // check tenant exists
         var tenantExists = await _db.Tenants.AnyAsync(t => t.TenantId == tenantId);
         if (!tenantExists)
@@ -41,6 +45,11 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetUsers()
     {
-        return Ok(await _db.Users.ToListAsync());
+        var tenantId = _tenantContext.TenantId;
+        var users = await _db.Users
+            .Where(u => u.TenantId == tenantId)
+            .ToListAsync();
+
+        return Ok(users);
     }
 }
