@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SaaSPlatform.Api.Data;
 using SaaSPlatform.Api.Models;
+using SaaSPlatform.Api.Dtos;
 
 namespace SaaSPlatform.Api.Controllers;
 
@@ -17,15 +18,15 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateTenant(string name)
+    public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest request)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequest("Name is required");
 
         var tenant = new Tenant
         {
             TenantId = Guid.NewGuid(),
-            Name = name,
+            Name = request.Name,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -40,5 +41,41 @@ public class TenantsController : ControllerBase
     {
         var tenants = await _db.Tenants.ToListAsync();
         return Ok(tenants);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var tenant = await _db.Tenants.FindAsync(id);
+        if (tenant == null)
+            return NotFound();
+
+        return Ok(tenant);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTenant(Guid id, [FromBody] UpdateTenantRequest request)
+    {
+        var tenant = await _db.Tenants.FindAsync(id);
+        if (tenant == null)
+            return NotFound();
+
+        tenant.Name = request.Name;
+        await _db.SaveChangesAsync();
+
+        return Ok(tenant);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTenant(Guid id)
+    {
+        var tenant = await _db.Tenants.FindAsync(id);
+        if (tenant == null)
+            return NotFound();
+
+        _db.Tenants.Remove(tenant);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 }
